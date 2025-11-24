@@ -142,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               </div>
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">Roshan</p>
+                  <p className="text-sm font-medium text-gray-900">John Doe</p>
                   <p className="text-sm text-gray-500 truncate">
                     admin@example.com
                   </p>
