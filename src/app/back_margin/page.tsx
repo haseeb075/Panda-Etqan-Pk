@@ -1,7 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { BackMarginData } from "@/utils/dummyData";
 import { businessUnits, departments, vendors, months } from "@/utils/constants";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -17,13 +17,19 @@ export default function BackMarginPage() {
     error,
   } = useAppSelector((state: RootState) => state.backMargin);
 
-  console.log(allData);
-
   // Filter states
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  // Sorting states
+  const [sortField, setSortField] = useState<keyof BackMarginData | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Fetch data from API on component mount
   useEffect(() => {
@@ -31,7 +37,7 @@ export default function BackMarginPage() {
   }, [dispatch]);
 
   // Filter data based on selected filters
-  const data = allData.filter((item: BackMarginData) => {
+  let filteredData = allData.filter((item: BackMarginData) => {
     // Business Unit filter
     if (selectedBusinessUnit && item.businessUnit !== selectedBusinessUnit) {
       return false;
@@ -52,17 +58,70 @@ export default function BackMarginPage() {
     return true;
   });
 
-  const totalMargin = data.reduce(
+  // Sort data
+  if (sortField) {
+    filteredData = [...filteredData].sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+
+      return 0;
+    });
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const data = filteredData.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBusinessUnit, selectedDepartment, selectedVendor, selectedMonth]);
+
+  // Handle sorting
+  const handleSort = (field: keyof BackMarginData) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Calculate summary statistics from filtered data (not paginated)
+  const totalMargin = filteredData.reduce(
     (sum: number, item: BackMarginData) => sum + item.margin,
     0
   );
   const averageMarginPercentage =
-    data.length > 0
-      ? data.reduce(
+    filteredData.length > 0
+      ? filteredData.reduce(
           (sum: number, item: BackMarginData) => sum + item.marginPercentage,
           0
-        ) / data.length
+        ) / filteredData.length
       : 0;
+  const totalCost = filteredData.reduce(
+    (sum: number, item: BackMarginData) => sum + item.cost,
+    0
+  );
+  const totalPrice = filteredData.reduce(
+    (sum: number, item: BackMarginData) => sum + item.price,
+    0
+  );
 
   return (
     <Layout>
@@ -77,8 +136,11 @@ export default function BackMarginPage() {
         {loading && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center mb-6">
             <div className="flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-              <p className="text-gray-600">Loading data...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-bg mb-4"></div>
+              <p className="text-gray-600 font-medium">Loading data...</p>
+              <p className="text-gray-400 text-sm mt-2">
+                Please wait while we fetch your data
+              </p>
             </div>
           </div>
         )}
@@ -99,6 +161,75 @@ export default function BackMarginPage() {
               >
                 Retry
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Statistics */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Products
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {filteredData.length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📦</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Margin
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    ${totalMargin.toFixed(2)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">💰</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Avg Margin %
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {averageMarginPercentage.toFixed(2)}%
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📊</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Revenue
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    ${totalPrice.toFixed(2)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">💵</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -228,41 +359,137 @@ export default function BackMarginPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("id")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      {sortField === "id" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("product")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Product</span>
+                      {sortField === "product" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("category")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Category</span>
+                      {sortField === "category" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Business Unit
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("businessUnit")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Business Unit</span>
+                      {sortField === "businessUnit" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Department
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("department")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Department</span>
+                      {sortField === "department" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vendor
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("vendor")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Vendor</span>
+                      {sortField === "vendor" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Month
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("month")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Month</span>
+                      {sortField === "month" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cost
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("cost")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Cost</span>
+                      {sortField === "cost" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("price")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Price</span>
+                      {sortField === "price" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Margin
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("margin")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Margin</span>
+                      {sortField === "margin" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Margin %
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("marginPercentage")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Margin %</span>
+                      {sortField === "marginPercentage" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("date")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Date</span>
+                      {sortField === "date" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
                 </tr>
               </thead>
@@ -321,14 +548,76 @@ export default function BackMarginPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {!loading && !error && filteredData.length > 0 && totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
+                <span className="font-medium">
+                  {Math.min(endIndex, filteredData.length)}
+                </span>{" "}
+                of <span className="font-medium">{filteredData.length}</span>{" "}
+                results
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(
+                      (page) =>
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                    )
+                    .map((page, index, array) => (
+                      <React.Fragment key={page}>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === page
+                              ? "bg-green-bg text-white"
+                              : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                </div>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Empty State (if no data) */}
-        {data.length === 0 && (
+        {!loading && !error && filteredData.length === 0 && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <p className="text-gray-500 text-lg">No data available</p>
             <p className="text-gray-400 text-sm mt-2">
-              Add some data to get started
+              {allData.length === 0
+                ? "Add some data to get started"
+                : "No data matches the selected filters"}
             </p>
           </div>
         )}

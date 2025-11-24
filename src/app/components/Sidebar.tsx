@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import SVGImage from "./SVGImage";
 import EtqanSidebarLogo from "@/images/EtqanSidebarLogo.svg";
 
@@ -11,6 +13,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const pathname = usePathname();
 
   const menuItems = [
     { icon: "🏠", label: "BACK MARGIN", href: "/back_margin" },
@@ -95,24 +98,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
           {/* Menu Items */}
           <nav className="flex-1 overflow-y-auto p-4">
             <ul className="space-y-2">
-              {menuItems.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={`flex items-center rounded-lg hover:bg-gray-100 transition-colors ${
-                      isCollapsed ? "justify-center p-3" : "space-x-3 p-3"
-                    }`}
-                    title={isCollapsed ? item.label : undefined}
-                  >
-                    <span className="text-xl flex-shrink-0">{item.icon}</span>
-                    {!isCollapsed && (
-                      <span className="text-gray-700 whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    )}
-                  </a>
-                </li>
-              ))}
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        // Close sidebar on mobile when link is clicked
+                        if (window.innerWidth < 1024 && onClose) {
+                          onClose();
+                        }
+                      }}
+                      className={`flex items-center rounded-lg transition-colors ${
+                        isCollapsed ? "justify-center p-3" : "space-x-3 p-3"
+                      } ${
+                        isActive
+                          ? "bg-green-bg text-white"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                      title={isCollapsed ? item.label : undefined}
+                    >
+                      <span className="text-xl flex-shrink-0">{item.icon}</span>
+                      {!isCollapsed && (
+                        <span className="whitespace-nowrap">{item.label}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 

@@ -1,13 +1,25 @@
-import React from "react";
+"use client";
 
-const Header: React.FC = () => {
+import React from "react";
+import Link from "next/link";
+
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   return (
     <header className="bg-green-bg text-white shadow-md">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo/Brand */}
-          <div className="flex items-center ">
-            <h1 className="text-xl font-bold">Etqan</h1>
+          <div className="flex items-center">
+            <Link
+              href="/"
+              className="text-xl font-bold hover:opacity-80 transition-opacity"
+            >
+              Etqan
+            </Link>
           </div>
 
           {/* User Menu */}
@@ -17,7 +29,11 @@ const Header: React.FC = () => {
             </button>
 
             {/* Mobile Menu Button */}
-            <button className="md:hidden p-2 rounded-lg hover:bg-[#003a15] transition-colors">
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden p-2 rounded-lg hover:bg-[#003a15] transition-colors"
+              aria-label="Toggle menu"
+            >
               <svg
                 className="w-6 h-6"
                 fill="none"
@@ -33,25 +49,6 @@ const Header: React.FC = () => {
               </svg>
             </button>
           </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="md:hidden mt-4 pt-4 border-t border-green-500">
-          <nav className="flex flex-col space-y-3">
-            <a
-              href="#"
-              className="hover:text-green-200 transition-colors py-2"
-            ></a>
-            <a href="#" className="hover:text-green-200 transition-colors py-2">
-              About
-            </a>
-            <a href="#" className="hover:text-green-200 transition-colors py-2">
-              Services
-            </a>
-            <a href="#" className="hover:text-green-200 transition-colors py-2">
-              Contact
-            </a>
-          </nav>
         </div>
       </div>
     </header>
