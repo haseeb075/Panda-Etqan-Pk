@@ -1,8 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import SVGImage from "./SVGImage";
 import EtqanSidebarLogo from "@/images/EtqanSidebarLogo.svg";
+import {
+  Home,
+  BarChart3,
+  Users,
+  Package,
+  DollarSign,
+  ChevronsLeft,
+  User,
+} from "lucide-react";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -11,13 +22,14 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const pathname = usePathname();
 
   const menuItems = [
-    { icon: "🏠", label: "BACK MARGIN", href: "/back_margin" },
-    { icon: "📊", label: "FRONT MARGIN", href: "/front_margin" },
-    { icon: "👥", label: "BACK MARGIN ADHOC", href: "/back_margin_adhoc" },
-    { icon: "📦", label: "ADMIN SCREEN", href: "/admin_screen" },
-    { icon: "💰", label: "USER MANAGEMENT", href: "/user_management" },
+    { icon: Home, label: "BACK MARGIN", href: "/back_margin" },
+    { icon: BarChart3, label: "FRONT MARGIN", href: "/front_margin" },
+    { icon: Users, label: "BACK MARGIN ADHOC", href: "/back_margin_adhoc" },
+    { icon: Package, label: "ADMIN SCREEN", href: "/admin_screen" },
+    { icon: DollarSign, label: "USER MANAGEMENT", href: "/user_management" },
   ];
 
   const toggleCollapse = () => {
@@ -74,45 +86,50 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               }`}
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              <svg
+              <ChevronsLeft
                 className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${
                   isCollapsed ? "rotate-180" : ""
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                />
-              </svg>
+              />
             </button>
           </div>
 
           {/* Menu Items */}
           <nav className="flex-1 overflow-y-auto p-4">
             <ul className="space-y-2">
-              {menuItems.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={`flex items-center rounded-lg hover:bg-gray-100 transition-colors ${
-                      isCollapsed ? "justify-center p-3" : "space-x-3 p-3"
-                    }`}
-                    title={isCollapsed ? item.label : undefined}
-                  >
-                    <span className="text-xl flex-shrink-0">{item.icon}</span>
-                    {!isCollapsed && (
-                      <span className="text-gray-700 whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    )}
-                  </a>
-                </li>
-              ))}
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        // Close sidebar on mobile when navigating
+                        if (onClose && typeof window !== "undefined" && window.innerWidth < 1024) {
+                          onClose();
+                        }
+                      }}
+                      className={`flex items-center rounded-lg transition-colors ${
+                        isCollapsed ? "justify-center p-3" : "space-x-3 p-3"
+                      } ${
+                        isActive
+                          ? "bg-green-50 text-green-700 font-semibold"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                      title={isCollapsed ? item.label : undefined}
+                    >
+                      {React.createElement(item.icon, {
+                        className: `w-5 h-5 flex-shrink-0 ${
+                          isActive ? "text-green-700" : "text-gray-600"
+                        }`,
+                      })}
+                      {!isCollapsed && (
+                        <span className="whitespace-nowrap">{item.label}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 
@@ -124,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               }`}
             >
               <div className="w-8 h-8 bg-green-bg rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">U</span>
+                <User className="w-4 h-4 text-white" />
               </div>
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
